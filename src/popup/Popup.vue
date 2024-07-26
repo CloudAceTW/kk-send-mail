@@ -5,12 +5,13 @@ const token = ref('')
 const state = reactive({
   emailTo: "",
   userName: "",
-  saveStatus: "",
+  successStatus: "",
+  faliedStatus: "",
   myToken: "",
 })
 
 onMounted(() => {
-  getAccessToken()
+  Login()
   setUpState()
 })
 
@@ -19,6 +20,7 @@ const Login = () => {
     if (myToken) {
       chrome.storage.sync.set({ googleAccessToken: myToken })
       getAccessToken()
+      state.successStatus = "Success to get access token"
     } else {
       console.error('Failed to get access token')
     }
@@ -76,6 +78,7 @@ const GetAttendanceList = async () => {
     return json.manHours
   } catch (error) {
     console.error(error.message)
+    state.faliedStatus = "Failed to Get Attendance List"
   }
   return []
 }
@@ -102,34 +105,37 @@ const Send = async (emailBodyAttendance) => {
     console.log(json)
   } catch (error) {
     console.error(error.message)
+    state.faliedStatus = `Failed to send, please to relogin`
+    state.myToken = ""
   }
 }
 
 const SaveToStorage = async () => {
-  state.saveStatus = ""
+  state.successStatus = ""
   chrome.storage.sync.set({
     emailTo: state.emailTo,
     userName: state.userName
   })
   await new Promise(r => setTimeout(r, 500));
-  state.saveStatus = "Saved"
+  state.successStatus = "Saved"
 }
 
 const GetAttendanceAndSend = async () => {
-  state.saveStatus = ""
+  state.successStatus = ""
+  state.faliedStatus = ""
   let manHours = await GetAttendanceList()
   if (manHours.length <= 0) {
-    state.saveStatus = "No Attendance Found"
+    state.successStatus = "No Attendance Found"
     return
   }
-  let startNumber = 1
+
   let emailBodyAttendanceStart = ""
   let emailBodyAttendance = manHours.reduce(
     (accumulator, currentValue, currentIndex) => accumulator + getOrderName(currentIndex+1, currentValue),
     emailBodyAttendanceStart,
   )
   await Send(emailBodyAttendance)
-  state.saveStatus = "Sent"
+  state.successStatus = "Sent"
 }
 
 const getOrderName = (startNumber, manHour) => {
@@ -159,7 +165,8 @@ const getOrderName = (startNumber, manHour) => {
       <button @click="SaveToStorage">Save</button>
       <button @click="GetAttendanceAndSend">Send</button>
     </div>
-    <a>{{state.saveStatus}}</a>
+    <a>{{state.successStatus}}</a>
+    <a class="falied">{{state.faliedStatus}}</a>
   </main>
 </template>
 
@@ -231,6 +238,18 @@ h3 {
     margin: 0 1rem;
   }
 
+  > button:hover {
+    background-color: #42b983;
+    color: #ffffff;
+  }
+
+  > button:active {
+    background-color: #42b983;
+    color: #ffffff;
+    box-shadow: 0 5px #666;
+    transform: translateY(4px);
+  }
+
   > h4 {
     font-size: 1rem;
     margin: 0 1rem;
@@ -258,4 +277,9 @@ a {
   color: #cccccc;
   text-decoration: none;
 }
+
+.falied {
+  color: #ff6600;
+}
+
 </style>
